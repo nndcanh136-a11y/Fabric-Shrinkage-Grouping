@@ -1,209 +1,263 @@
 # Fabric Pattern Set Optimization under Shrinkage Tolerance
 
-> An Operations Research approach for minimizing the number of representative fabric marker patterns using Mixed Integer Programming.
+> **An Operations Research approach for minimizing representative marker patterns using Mixed Integer Programming (MILP).**
+
+![Python](https://img.shields.io/badge/Python-3.11-blue)
+![OR](https://img.shields.io/badge/Operations%20Research-MILP-success)
+![License](https://img.shields.io/badge/License-MIT-green)
 
 ---
 
 ## Abstract
 
-In garment manufacturing, each fabric batch exhibits unique shrinkage characteristics after washing. Traditionally, marker patterns are created based on these shrinkage measurements to ensure dimensional accuracy after production.
+Fabric shrinkage variation is one of the major challenges in garment manufacturing. Since each fabric batch exhibits different length and width shrinkage after washing, engineers typically create multiple marker patterns to maintain dimensional accuracy.
 
-Creating a dedicated marker for every fabric batch is impractical because it increases engineering workload, marker preparation time, CAD operations, storage complexity, and production planning effort.
+However, increasing the number of marker patterns also increases engineering effort, CAD preparation time, marker storage, and production complexity.
 
-This project formulates the pattern grouping problem as a **Minimum Set Covering Problem**, aiming to determine the minimum number of representative marker patterns while ensuring that every fabric batch satisfies predefined shrinkage tolerance constraints.
+This project formulates the marker grouping process as a **Minimum Set Covering Problem (MSCP)** and determines the minimum number of representative marker patterns while guaranteeing that every fabric batch satisfies predefined shrinkage tolerance constraints.
 
-Unlike conventional clustering algorithms, the proposed optimization model guarantees engineering feasibility and provides mathematically optimal solutions.
+Unlike conventional clustering algorithms, the proposed model explicitly incorporates engineering feasibility into the optimization process and guarantees optimal solutions using Mixed Integer Linear Programming (MILP).
 
 ---
 
 # Industrial Background
 
-During marker preparation, engineers receive multiple fabric batches belonging to a Production Planning Order (PPO).
+During marker preparation, each Production Planning Order (PPO) contains multiple fabric batches.
 
-Each batch is tested to obtain:
+Every batch is tested for shrinkage and represented by
 
-- Length Shrinkage (%)
-- Width Shrinkage (%)
+- Length Shrinkage ($L$)
+- Width Shrinkage ($W$)
 
-Example:
+Example
 
-| Batch | Length (%) | Width (%) |
-|--------|-----------:|----------:|
-| A | -5.20 | -2.40 |
-| B | -5.10 | -2.10 |
-| C | -7.10 | -3.90 |
+| Batch | Length Shrinkage | Width Shrinkage |
+|-------|-----------------:|----------------:|
+| A | -5.20% | -2.40% |
+| B | -5.05% | -2.10% |
+| C | -7.10% | -3.80% |
 
-The conventional approach relies heavily on engineering experience to determine which batches can share the same marker pattern.
+Traditionally, experienced engineers manually determine which batches can share the same marker pattern.
 
-As production volume increases, manual grouping becomes increasingly difficult and inconsistent.
+As the number of batches increases, manual grouping becomes
 
-This project replaces subjective decision-making with an optimization model.
+- time consuming,
+- inconsistent,
+- difficult to verify,
+- impossible to guarantee optimality.
 
 ---
 
 # Problem Statement
 
-Given a set of fabric batches
+Given
 
-\[
-B=\{1,2,\ldots,n\}
-\]
+$$
+n
+$$
 
-Each batch is represented by
+fabric batches,
 
-\[
-(L_i,W_i)
-\]
+each batch is represented by
+
+$$
+(L_i,\;W_i)
+$$
 
 where
 
-- \(L_i\) = Length Shrinkage
-- \(W_i\) = Width Shrinkage
+- $L_i$ : Length Shrinkage (%)
+- $W_i$ : Width Shrinkage (%)
 
-Two batches may share one representative marker pattern if
+Two batches may share the same representative marker pattern if
 
-\[
-|L_i-L_j|\le T
-\]
+$$
+|L_i-L_j|\le T_L
+$$
 
 and
 
-\[
-|W_i-W_j|\le T
-\]
+$$
+|W_i-W_j|\le T_W
+$$
 
 where
 
-- \(T\) is the allowable shrinkage tolerance defined by the factory.
+- $T_L$ = allowable tolerance in Length direction
+- $T_W$ = allowable tolerance in Width direction
 
-The objective is to determine
+The objective is to
 
-- the minimum number of representative marker patterns;
-- the assignment of every batch to one representative pattern.
+- minimize the number of representative marker patterns;
+- assign every fabric batch to one feasible representative.
 
 ---
 
 # Mathematical Formulation
 
-## Decision Variable
+## Sets
 
-\[
-x_j=
-\begin{cases}
-1,&\text{if representative pattern }j\text{ is selected}\\
-0,&\text{otherwise}
-\end{cases}
-\]
+$$
+I=\{1,\ldots,n\}
+$$
+
+Set of all fabric batches.
+
+Since every batch can potentially become a representative,
+
+$$
+J=I
+$$
 
 ---
 
-## Coverage Parameter
+## Parameters
 
-\[
-a_{ij}=
+Each batch has measured shrinkage values
+
+$$
+L_i,\qquad W_i
+$$
+
+The binary coverage parameter is defined as
+
+$$
+a_{ij}=1
+$$
+
+if
+
+$$
+\max\left(
+|L_i-L_j|,
+|W_i-W_j|
+\right)\le T
+$$
+
+Otherwise,
+
+$$
+a_{ij}=0
+$$
+
+---
+
+## Decision Variable
+
+Let
+
+$$
+x_j=
 \begin{cases}
-1,&
-\max(|L_i-L_j|,\ |W_i-W_j|)\le T\\
-0,&\text{otherwise}
+1 & \text{Representative pattern }j\text{ is selected}\\
+0 & \text{Otherwise}
 \end{cases}
-\]
+$$
 
 ---
 
 ## Objective Function
 
-Minimize the number of representative patterns
+Minimize the number of representative marker patterns
 
-\[
-\min\sum_jx_j
-\]
+$$
+\min
+\sum_{j\in J}
+x_j
+$$
 
 ---
 
 ## Constraints
 
-Every fabric batch must be covered by at least one representative pattern.
+Every fabric batch must be covered by at least one selected representative.
 
-\[
-\sum_ja_{ij}x_j\ge1,
-\qquad\forall i
-\]
+$$
+\sum_{j\in J}
+a_{ij}x_j
+\ge
+1,
+\qquad
+\forall i\in I
+$$
 
 ---
 
 # Optimization Workflow
 
 ```text
-Fabric Batch Data
-        │
-        ▼
-Construct Coverage Matrix
-        │
-        ▼
+Fabric Shrinkage Data
+          │
+          ▼
+Data Preprocessing
+          │
+          ▼
+Coverage Matrix Construction
+          │
+          ▼
 Minimum Set Covering Model
-        │
-        ▼
-Mixed Integer Programming Solver
-        │
-        ▼
+          │
+          ▼
+MILP Solver
+          │
+          ▼
 Optimal Representative Patterns
-        │
-        ▼
+          │
+          ▼
 Batch Assignment
+          │
+          ▼
+Visualization & Reporting
 ```
 
 ---
 
-# Why Operations Research?
+# Why Not K-Means?
 
-This problem is fundamentally **not** a clustering problem.
+K-Means minimizes Euclidean distance,
 
-Although algorithms such as K-Means can partition observations into groups, they cannot guarantee that every batch satisfies the maximum allowable shrinkage tolerance.
+$$
+\min
+\sum_i
+\|x_i-c_k\|^2
+$$
 
-The engineering requirement is a **hard feasibility constraint**, making the problem naturally suited to combinatorial optimization.
+but does **not** guarantee
 
-This project therefore models the problem as a **Minimum Set Covering Problem**, one of the classical problems in Operations Research.
+$$
+|L_i-L_j|\le T
+$$
 
----
+and
 
-# Methodology
+$$
+|W_i-W_j|\le T
+$$
 
-The proposed framework consists of the following steps:
+for every assigned batch.
 
-1. Import fabric shrinkage measurements.
-2. Construct the coverage matrix based on tolerance.
-3. Formulate the optimization model.
-4. Solve using Mixed Integer Linear Programming.
-5. Generate representative marker patterns.
-6. Assign every fabric batch to one representative pattern.
-7. Evaluate solution quality.
+Consequently, K-Means may generate clusters that violate engineering constraints.
 
----
-
-# Visualization
-
-The repository includes several visualization modules.
-
-- 2D Shrinkage Distribution
-- Representative Pattern Coverage
-- Coverage Matrix
-- Sensitivity Analysis
-- Tolerance vs Number of Patterns
-- Assignment Visualization
+This project instead formulates the problem as a **Minimum Set Covering Problem**, ensuring every assignment remains feasible.
 
 ---
 
-# Computational Experiments
+# Computational Complexity
 
-Experiments investigate the relationship between shrinkage tolerance and the minimum number of representative patterns.
+The optimization model belongs to the family of **NP-hard combinatorial optimization problems**.
 
-Typical analyses include:
+Exact solutions are obtained using
 
-- Effect of tolerance on solution size
-- Coverage visualization
-- Solver performance
-- Comparison with heuristic methods
-- Engineering interpretation
+- Mixed Integer Linear Programming (MILP)
+- Branch-and-Bound
+
+For larger industrial datasets, heuristic approaches such as
+
+- Greedy Set Cover,
+- Lagrangian Relaxation,
+- Column Generation,
+
+may be investigated.
 
 ---
 
@@ -215,53 +269,77 @@ Fabric-Pattern-Optimization
 ├── data/
 │
 ├── src/
+│   ├── preprocessing.py
 │   ├── optimization.py
 │   ├── visualization.py
-│   ├── preprocessing.py
 │   └── experiments.py
 │
 ├── results/
 │   ├── figures/
 │   ├── reports/
-│   └── sensitivity/
+│   └── sensitivity_analysis/
 │
 ├── docs/
-│   ├── Mathematical_Model.pdf
-│   ├── Computational_Results.pdf
-│   └── Literature_Review.pdf
+│   ├── formulation.md
+│   ├── experiments.md
+│   ├── literature_review.md
+│   └── mathematical_model.pdf
 │
 └── README.md
 ```
 
 ---
 
+# Experimental Analysis
+
+The repository evaluates
+
+- Number of representative patterns
+- Batch assignment
+- Coverage verification
+- Sensitivity analysis
+- Tolerance versus solution size
+- Computational time
+
+Example visualizations include
+
+- Shrinkage Scatter Plot
+- Coverage Matrix
+- Representative Pattern Assignment
+- Sensitivity Analysis
+- Feasible Region Visualization
+
+---
+
 # Future Research
 
-Possible extensions include
+Potential extensions include
 
-- Capacitated Set Covering
 - Weighted Set Covering
+- Capacitated Set Covering
 - Multi-objective Optimization
 - Robust Optimization
 - Stochastic Programming
-- Marker Planning Optimization
 - Fabric Roll Assignment
 - Marker Scheduling
+- Branch-and-Price
 - Column Generation
 - Benders Decomposition
-- Branch-and-Price
 
 ---
 
 # References
 
-- Hillier, F. S., & Lieberman, G. J. *Introduction to Operations Research.*
-- Nemhauser, G. L., & Wolsey, L. A. *Integer and Combinatorial Optimization.*
-- Garey, M. R., & Johnson, D. S. *Computers and Intractability.*
-- Winston, W. L. *Operations Research: Applications and Algorithms.*
+1. Hillier, F. S., & Lieberman, G. J. *Introduction to Operations Research.*
+
+2. Nemhauser, G. L., & Wolsey, L. A. *Integer and Combinatorial Optimization.*
+
+3. Garey, M. R., & Johnson, D. S. *Computers and Intractability: A Guide to the Theory of NP-Completeness.*
+
+4. Winston, W. L. *Operations Research: Applications and Algorithms.*
 
 ---
 
 # Keywords
 
-Operations Research • Mixed Integer Programming • Set Covering • Integer Programming • Manufacturing Optimization • Industrial Engineering • Garment Engineering • Decision Science • Optimization
+Operations Research • Mixed Integer Programming • Integer Programming • Set Covering • Manufacturing Optimization • Industrial Engineering • Decision Science • Combinatorial Optimization
